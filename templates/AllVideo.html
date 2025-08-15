@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Danh sách Video - EduSpark</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.244.0/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="/static/css/AllVideo.css">
+  <link rel="stylesheet" href="/static/css/Home.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="min-h-screen bg-gray-50">
+  <!-- HEADER -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 flex items-center justify-between h-16">
+            <!-- Logo bên trái -->
+            <a href="{{ url_for('home') }}" class="flex items-center space-x-2">
+            <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                <i data-lucide="play" class="w-4 h-4 text-white"></i>
+            </div>
+            <span class="text-xl font-bold text-gray-900">EduSpark</span>
+            </a>
+            <!-- Menu chính giữa: chỉ hiện trên sm+ -->
+            <nav class="hidden sm:flex justify-center space-x-12 flex-1">
+              <a href="{{ url_for('home') }}" class="text-gray-600 hover:text-orange-600">Trang chủ</a>
+              <a href="{{ url_for('all_videos') }}" class="text-gray-900 hover:text-orange-600 font-medium">Khám phá</a>
+              <a href="{{ url_for('user_dashboard') }}" class="text-gray-600 hover:text-orange-600">Nội dung của tôi</a>
+            </nav>
+            <!-- Action bên phải -->
+            <div class="flex items-center space-x-4">
+               {% if current_user %}
+              <div class="relative">
+                <button id="bell-btn" class="relative inline-flex items-center justify-center h-9 w-9 text-gray-600 hover:text-orange-600">
+                    <i class="w-5 h-5">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0M3.124 7.5A8.969 8.969 0 0 1 5.292 3m13.416 0a8.969 8.969 0 0 1 2.168 4.5" />
+                        </svg>
+                    </i>
+                    <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+                </button>
+                <!-- Thông báo -->
+                <div id="notification-dropdown" class="hidden absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                  <div class="p-4 font-bold border-b">Thông báo</div>
+                  <ul>
+                    <li class="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">Bạn vừa nhận 1 tin nhắn mới</li>
+                    <li class="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">Video "Toán lớp 3" vừa được duyệt</li>
+                    <li class="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm">Có 5 lượt thích mới cho nội dung của bạn</li>
+                  </ul>
+                  <div class="p-2 border-t text-xs text-center text-blue-600 cursor-pointer hover:underline">Xem tất cả thông báo</div>
+                </div>
+              </div>
+
+            <div class="relative">
+              <button id="avatar-btn"
+                      class="inline-flex items-center justify-center h-9 w-9 rounded-full overflow-hidden ring-2 ring-orange-500/20"
+                      aria-haspopup="true" aria-expanded="false">
+                <img src="{{ (current_user.profile.avatar if current_user.profile and current_user.profile.avatar
+                              else url_for('static', filename='img/au2.jpg')) }}"
+                    alt="User" class="object-cover w-full h-full">
+              </button>
+
+              <!-- Menu thả xuống -->
+            <div id="avatar-menu"
+                class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+              <div class="px-4 py-3 text-sm">
+                <div class="font-medium text-gray-900">{{ current_user.username }}</div>
+                <div class="text-gray-500 truncate">{{ current_user.email }}</div>
+              </div>
+              <div class="border-t">
+                <a href="{{ url_for('user_dashboard') }}"
+                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Hồ sơ của tôi</a>
+                {% if current_user.role == 'admin' %}
+                  <a href="{{ url_for('admin_page') }}"
+                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Trang quản trị</a>
+                {% endif %}
+                <a href="{{ url_for('logout') }}"
+                  class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">Đăng xuất</a>
+              </div>
+            </div>
+            </div>
+            {% else %}
+              <!-- Chưa đăng nhập: chỉ hiện nút Đăng nhập -->
+              <a href="{{ url_for('login', next=request.path) }}"
+                class="px-4 py-2 rounded-lg bg-orange-500 text-white hover:bg-orange-600">
+                Đăng nhập
+              </a>
+            {% endif %}
+            </div>
+        </div>
+    </header>
+  <!-- CONTENT -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+  <!-- Thanh tìm kiếm và bộ lọc -->
+  <div class="flex items-center justify-between mb-8 gap-6">
+    <!-- Bộ lọc -->
+    <div class="relative w-1/4">
+      <select id="video-category" class="w-full px-4 py-2 pr-10 pl-3 appearance-none rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500 transition-all duration-200 ease-in-out">
+        <option value="all">Tất cả</option>
+        <option value="Khoa học">Khoa học</option>
+        <option value="Toán">Toán</option>
+        <option value="Công nghệ">Công nghệ</option>
+      </select>
+      <span class="absolute top-3 right-3 text-gray-600">
+        <i data-lucide="chevron-down" class="w-5 h-5"></i>
+      </span>
+    </div>
+    <!-- Thanh tìm kiếm -->
+    <form action="{{ url_for('search') }}" method="get" class="relative w-full sm:w-2/3">
+      <input 
+        id="video-search" 
+        name="q"
+        type="text" 
+        placeholder="Tìm kiếm video..." 
+        class="w-full px-4 py-2 rounded-lg border border-gray-300 text-gray-700 
+              focus:outline-none focus:border-orange-500 focus:ring-2 
+              focus:ring-orange-500 pl-10 transition-all duration-200 ease-in-out"
+      />
+      <i class="absolute top-3 left-3 text-gray-500 w-5 h-5" data-lucide="search"></i>
+    </form>
+    
+    <!-- Bộ lọc icon -->
+    <button id="filter-button" class="text-gray-600 hover:text-orange-600 focus:outline-none transition-colors duration-200 ease-in-out">
+      <i class="w-5 h-5" data-lucide="filter"></i>
+    </button>
+    <div id="filter-popup" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 hidden">
+      <div class="bg-white p-8 rounded-lg shadow-lg w-96">
+        <h2 class="text-xl font-bold mb-4">Bộ lọc video</h2>
+        <!-- Thời lượng -->
+        <div class="mb-4">
+          <label for="duration" class="block text-sm">Thời lượng (phút)</label>
+          <input type="range" id="duration" min="0" max="30" value="0" class="w-full">
+          <span id="duration-value">0 phút</span>
+        </div>
+        
+        <!-- Đánh giá -->
+        <div class="mb-4">
+          <label for="rating" class="block text-sm">Đánh giá tối thiểu</label>
+          <input type="range" id="rating" min="0" max="5" value="0" class="w-full">
+          <span id="rating-value">0 sao</span>
+        </div>
+
+        <!-- Thời gian đăng -->
+        <div class="mb-4">
+          <label for="upload-time" class="block text-sm">Thời gian đăng</label>
+          <select id="upload-time" class="w-full px-4 py-2 rounded-lg border border-gray-300 text-gray-700">
+            <option value="all">Tất cả</option>
+            <option value="recent">Mới nhất</option>
+            <option value="old">Cũ nhất</option>
+          </select>
+        </div>
+
+        <!-- Độ khó -->
+        <div class="mb-4">
+          <label for="difficulty" class="block text-sm">Độ khó</label>
+          <select id="difficulty" class="w-full px-4 py-2 rounded-lg border border-gray-300 text-gray-700">
+            <option value="all">Tất cả</option>
+            <option value="easy">Dễ</option>
+            <option value="medium">Vừa</option>
+            <option value="hard">Khó</option>
+          </select>
+        </div>
+
+        <!-- Danh mục -->
+        <div class="mb-4">
+          <label class="block text-sm">Danh mục</label>
+          <div class="flex flex-col space-y-2">
+            <label><input type="checkbox" class="mr-2"> Design</label>
+            <label><input type="checkbox" class="mr-2"> Animation</label>
+            <label><input type="checkbox" class="mr-2"> UX Design</label>
+            <label><input type="checkbox" class="mr-2"> Typography</label>
+            <label><input type="checkbox" class="mr-2"> Branding</label>
+          </div>
+        </div>
+
+        <!-- Nút Áp dụng và Đặt lại -->
+        <div class="flex justify-between">
+          <button class="text-gray-500 hover:text-gray-800">Đặt lại</button>
+          <button class="bg-orange-500 text-white px-4 py-2 rounded-lg">Áp dụng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+    <!-- Render video theo lesson -->
+    {% for lesson_title, videos in lesson_videos.items() %}
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-2xl font-bold text-gray-800">{{ lesson_title }}</h2>
+        <button class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-100 focus:outline-none">
+          <a href="{{ url_for('all_video_details', category=lesson_title) }}" class="text-gray-900 hover:text-orange-600 font-medium">
+          Xem thêm
+          </a>
+        </button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for video in videos %}
+          <div class="bg-white rounded-lg overflow-hidden shadow group hover:shadow-lg transition cursor-pointer">
+            <a href="{{ url_for('video_single', video_id=video.video_id) }}" class="relative">
+            <div class="relative">
+              <img src="{{ video.thumbnail }}" alt="{{ video.title }}" class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300">
+              <div class="absolute top-3 left-3 bg-orange-500 text-white font-bold px-3 py-1 rounded-full text-sm inline-block z-10">
+                {{ lesson_title }}
+              </div>
+            </div>
+            <div class="p-4">
+              <h3 class="font-semibold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">{{ video.title }}</h3>
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                  <img src="/static/img/au1.jpg" alt="{{ video.created_by_user.username }}" class="w-6 h-6 rounded-full object-cover">
+                  <span class="text-sm text-gray-600">{{ video.created_by_user.username }}</span>
+                </div>
+                <button class="p-1 hover:bg-gray-100 rounded-full focus:outline-none">
+                  <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                </button>
+              </div>
+              <div class="flex items-center justify-between text-sm text-gray-500">
+                <span>{{ video.view }} lượt xem</span>
+                <div class="flex items-center space-x-1">
+                  <i data-lucide="heart" class="w-4 h-4"></i>
+                  <span>{{ video.likes }}</span>
+                </div>
+              </div>
+            </div>
+            </a>
+          </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+    <br>
+
+
+
+<!-- Phần video theo thể loại (phần fix cứng demo) -->
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-2xl font-bold text-gray-800">STEM 5 (Demo)</h2>
+      <button class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-100 focus:outline-none">
+          <a href="#" class="text-gray-900 hover:text-orange-600 font-medium">
+          Xem thêm
+          </a>
+        </button>
+    </div>
+    <div id="" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Video 1 -->
+      <div class="bg-white rounded-lg overflow-hidden shadow group hover:shadow-lg transition cursor-pointer">
+        <div class="relative">
+          <img src="/static/img/bg1.png" alt="Toán học lớp 3" class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300">
+          <div class="absolute bottom-2 right-2 bg-black bg-opacity-80 text-white px-2 py-1 text-sm rounded">
+            12:34
+          </div>
+          <div class="absolute top-3 left-3 bg-orange-500 text-white font-bold px-3 py-1 rounded-full text-sm inline-block z-10">
+            Toán
+          </div>
+        </div>
+        <div class="p-4">
+          <h3 class="font-semibold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">Toán học lớp 3</h3>
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <img src="/static/img/au1.jpg" alt="Tiến Nguyễn" class="w-6 h-6 rounded-full object-cover">
+              <span class="text-sm text-gray-600">Tiến Nguyễn</span>
+            </div>
+            <button class="p-1 hover:bg-gray-100 rounded-full focus:outline-none">
+              <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="flex items-center justify-between text-sm text-gray-500">
+            <span>125K lượt xem</span>
+            <div class="flex items-center space-x-1">
+              <i data-lucide="heart" class="w-4 h-4"></i>
+              <span>3.2K</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Video 2 -->
+      <div class="bg-white rounded-lg overflow-hidden shadow group hover:shadow-lg transition cursor-pointer">
+        <div class="relative">
+          <img src="/static/img/bg1.png" alt="Khoa học lớp 3" class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300">
+          <div class="absolute bottom-2 right-2 bg-black bg-opacity-80 text-white px-2 py-1 text-sm rounded">
+            8:45
+          </div>
+          <div class="absolute top-3 left-3 bg-orange-500 text-white font-bold px-3 py-1 rounded-full text-sm inline-block z-10">
+            Khoa học
+          </div>
+        </div>
+        <div class="p-4">
+          <h3 class="font-semibold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">Khoa học lớp 3</h3>
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <img src="/static/img/au1.jpg" alt="Tiến Nguyễn" class="w-6 h-6 rounded-full object-cover">
+              <span class="text-sm text-gray-600">Tiến Nguyễn</span>
+            </div>
+            <button class="p-1 hover:bg-gray-100 rounded-full focus:outline-none">
+              <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="flex items-center justify-between text-sm text-gray-500">
+            <span>89K lượt xem</span>
+            <div class="flex items-center space-x-1">
+              <i data-lucide="heart" class="w-4 h-4"></i>
+              <span>2.1K</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Video 3 -->
+      <div class="bg-white rounded-lg overflow-hidden shadow group hover:shadow-lg transition cursor-pointer">
+        <div class="relative">
+          <img src="/static/img/bg1.png" alt="Khoa học lớp 4" class="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300">
+          <div class="absolute bottom-2 right-2 bg-black bg-opacity-80 text-white px-2 py-1 text-sm rounded">
+            15:22
+          </div>
+          <div class="absolute top-3 left-3 bg-orange-500 text-white font-bold px-3 py-1 rounded-full text-sm inline-block z-10">
+            Khoa học
+          </div>
+        </div>
+        <div class="p-4">
+          <h3 class="font-semibold text-gray-900 mb-2 group-hover:text-orange-600 transition-colors">Khoa học lớp 4</h3>
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <img src="/static/img/au1.jpg" alt="Tiến Nguyễn" class="w-6 h-6 rounded-full object-cover">
+              <span class="text-sm text-gray-600">Tiến Nguyễn</span>
+            </div>
+            <button class="p-1 hover:bg-gray-100 rounded-full focus:outline-none">
+              <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="flex items-center justify-between text-sm text-gray-500">
+            <span>234K lượt xem</span>
+            <div class="flex items-center space-x-1">
+              <i data-lucide="heart" class="w-4 h-4"></i>
+              <span>5.7K</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Render -->
+   
+
+</main>
+  <!-- FOOTER -->
+<footer class="bg-white border-t border-gray-200 mt-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <p class="text-center text-gray-600">Focus – Inspire – Nurture – Empower</p>
+  </div>
+</footer>
+<script src="/static/js/AllVideo.js"></script>
+<script>lucide.createIcons();</script>
+<script src="/static/js/Home.js"></script>
+<script>
+  const categorySelect = document.getElementById('video-category');
+
+  categorySelect.addEventListener('change', function() {
+    const selectedCategory = categorySelect.value;
+    // Chuyển hướng tới URL với tham số category được chọn
+    window.location.href = `/allvideo?category=${selectedCategory}`;
+  });
+</script>
+</div>
+</body>
+</html>

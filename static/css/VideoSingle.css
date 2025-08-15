@@ -1,0 +1,4 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Nếu có CSS custom nhỏ thêm vào, còn lại dùng hoàn toàn class Tailwind như gốc */

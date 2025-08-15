@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kết quả tìm kiếm - CreativeHub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        orange: {
+                            500: '#f97316',
+                            600: '#ea580c',
+                            50: '#fff7ed'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .video-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .video-card:hover .video-thumbnail img {
+            transform: scale(1.05);
+        }
+        
+        .video-card:hover .play-button {
+            opacity: 1;
+        }
+        
+        .video-card:hover .video-title {
+            color: #f97316;
+        }
+        
+        .play-button {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .video-thumbnail img {
+            transition: transform 0.3s ease;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-4">
+                    <button onclick="goBack()" class="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:text-gray-900 rounded-md">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                        <span>Quay lại</span>
+                    </button>
+                    <div class="w-8 h-8 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 5v10l7-5-7-5z"/>
+                        </svg>
+                    </div>
+                    <span class="text-xl font-bold text-gray-900">CreativeHub</span>
+                </div>
+
+                <div class="flex-1 max-w-2xl mx-8">
+                    <div class="relative">
+                        <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <input
+                            type="text"
+                            id="searchInput"
+                            placeholder="Tìm kiếm video..."
+                            value=""
+                            class="pl-10 pr-4 py-2 w-full border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:ring-orange-500 focus:outline-none"
+                            onkeypress="handleSearch(event)"
+                        />
+                    </div>
+                </div>
+
+                <button class="border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-md text-sm">
+                    Đăng nhập
+                </button>
+            </div>
+        </div>
+    </header>
+    <section class="bg-white border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">
+                        Kết quả tìm kiếm cho "{{ query }}"
+                    </h1>
+                </div>
+
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4"></path>
+                        </svg>
+                        <select class="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <option value="relevance">Liên quan</option>
+                            <option value="newest">Mới nhất</option>
+                            <option value="oldest">Cũ nhất</option>
+                            <option value="views">Lượt xem</option>
+                            <option value="rating">Đánh giá</option>
+                            <option value="duration">Thời lượng</option>
+                        </select>
+                    </div>
+
+                    <!-- <button onclick="openFilterModal()" class="border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-md text-sm flex items-center space-x-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.414A1 1 0 013 6.707V4z"></path>
+                        </svg>
+                        <span>Bộ lọc</span>
+                    </button> -->
+                </div>
+            </div>
+        </div>
+    </section>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="space-y-6">
+             <!-- Video Result 1 
+            <div class="video-card bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden">
+                <div class="flex flex-col md:flex-row">
+                    <div class="relative md:w-80 md:flex-shrink-0">
+                        <div class="video-thumbnail aspect-video md:aspect-[16/9] overflow-hidden">
+                            <img src="https://via.placeholder.com/320x180/f97316/ffffff?text=Logo+Design" alt="Video thumbnail" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                                <div class="play-button w-12 h-12 bg-white rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-orange-500 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M8 5v10l7-5-7-5z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="absolute bottom-2 right-2 bg-black/80 text-white px-2 py-1 rounded text-sm">12:34</div>
+                            <div class="absolute top-2 left-2 bg-orange-500 text-white px-2 py-1 rounded text-xs">Design</div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 p-6">
+                        <div class="flex flex-col h-full">
+                            <h3 class="video-title text-xl font-semibold text-gray-900 mb-3 transition-colors line-clamp-2">
+                                Hướng dẫn tạo Logo chuyên nghiệp với Adobe Illustrator
+                            </h3>
+
+                            <p class="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3">
+                                Trong video này, bạn sẽ học cách tạo một logo chuyên nghiệp từ ý tưởng đến sản phẩm hoàn thiện. Chúng ta sẽ đi qua từng bước một cách chi tiết, từ việc nghiên cứu thương hiệu, phác thảo ý tưởng, đến việc thực hiện trên phần mềm.
+                            </p>
+
+                            <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                                <div class="flex items-center space-x-4">
+                                    <div class="flex items-center space-x-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                        <span>125K lượt xem</span>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <span>2 ngày trước</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center space-x-1">
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        <svg class="w-4 h-4 text-gray-300" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                    </div>
+                                    <span class="text-sm font-medium">4.8</span>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center space-x-3 mt-auto">
+                                <img src="https://via.placeholder.com/32x32/f97316/ffffff?text=DS" alt="Author" class="w-8 h-8 rounded-full">
+                                <span class="text-sm font-medium text-gray-700">Design Studio Pro</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+           
+            <div class="video-card bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden">
+                <div class="flex flex-col md:flex-row">
+                    <div class="relative md:w-80 md:flex-shrink-0">
+                        <div class="video-thumbnail aspect-video md:aspect-[16/9] overflow-hidden">
+                            <img src="https://via.placeholder.com/320x180/f97316/ffffff?text=Logo+Trends" alt="Video thumbnail" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                                <div class="play-button w-12 h-12 bg-white rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-orange-500 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M8 5v10l7-5-7-5z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="absolute bottom-2 right-2 bg-black/80 text-white px-2 py-1 rounded text-sm">15:22</div>
+                            <div class="absolute top-2 left-2 bg-orange-500 text-white px-2 py-1 rounded text-xs">Design</div>
+                        </div>
+                    </div>
+                    <div class="flex-1 p-6">
+                        <div class="flex flex-col h-full">
+                            <h3 class="video-title text-xl font-semibold text-gray-900 mb-3 transition-colors line-clamp-2">
+                                Logo Design Trends 2024 - Xu hướng thiết kế mới
+                            </h3>
+                            <p class="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3">
+                                Khám phá những xu hướng thiết kế logo mới nhất năm 2024. Video này sẽ giúp bạn hiểu rõ về các phong cách thiết kế đang được ưa chuộng và cách áp dụng chúng vào dự án của mình.
+                            </p>
+                            <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                                <div class="flex items-center space-x-4">
+                                    <div class="flex items-center space-x-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                        <span>89K lượt xem</span>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <span>1 tuần trước</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        <svg class="w-4 h-4 text-gray-300" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                    </div>
+                                    <span class="text-sm font-medium">4.6</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3 mt-auto">
+                                <img src="https://via.placeholder.com/32x32/f97316/ffffff?text=CH" alt="Author" class="w-8 h-8 rounded-full">
+                                <span class="text-sm font-medium text-gray-700">Creative Hub</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        
+            <div class="video-card bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden">
+                <div class="flex flex-col md:flex-row">
+                    <div class="relative md:w-80 md:flex-shrink-0">
+                        <div class="video-thumbnail aspect-video md:aspect-[16/9] overflow-hidden">
+                            <img src="https://via.placeholder.com/320x180/f97316/ffffff?text=Simple+Logo" alt="Video thumbnail" class="w-full h-full object-cover">
+                            <div class="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                                <div class="play-button w-12 h-12 bg-white rounded-full flex items-center justify-center">
+                                    <svg class="w-6 h-6 text-orange-500 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M8 5v10l7-5-7-5z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="absolute bottom-2 right-2 bg-black/80 text-white px-2 py-1 rounded text-sm">8:45</div>
+                            <div class="absolute top-2 left-2 bg-orange-500 text-white px-2 py-1 rounded text-xs">Design</div>
+                        </div>
+                    </div>
+                    <div class="flex-1 p-6">
+                        <div class="flex flex-col h-full">
+                            <h3 class="video-title text-xl font-semibold text-gray-900 mb-3 transition-colors line-clamp-2">
+                                Tạo Logo đơn giản nhưng ấn tượng
+                            </h3>
+                            <p class="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3">
+                                Học cách thiết kế logo với phong cách tối giản nhưng vẫn tạo được ấn tượng mạnh. Video hướng dẫn chi tiết các nguyên tắc thiết kế minimalist và cách áp dụng hiệu quả.
+                            </p>
+                            <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                                <div class="flex items-center space-x-4">
+                                    <div class="flex items-center space-x-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                        <span>156K lượt xem</span>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <span>3 ngày trước</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                        <svg class="w-4 h-4 text-orange-500 fill-current" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                        </svg>
+                                    </div>
+                                    <span class="text-sm font-medium">4.9</span>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3 mt-auto">
+                                <img src="https://via.placeholder.com/32x32/f97316/ffffff?text=DM" alt="Author" class="w-8 h-8 rounded-full">
+                                <span class="text-sm font-medium text-gray-700">Design Master</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div> -->
+
+
+            <div class="space-y-6">
+            {% for v in results %}
+            <div class="video-card bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden">
+                <div class="flex flex-col md:flex-row">
+                <div class="relative md:w-80 md:flex-shrink-0">
+                    <div class="video-thumbnail aspect-video md:aspect-[16/9] overflow-hidden">
+                    <img src="{{ v.thumbnail or '/static/img/bg1.png.jpg' }}" alt="Video thumbnail" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                        <div class="play-button w-12 h-12 bg-white rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-orange-500 ml-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 5v10l7-5-7-5z"/>
+                        </svg>
+                        </div>
+                    </div>
+                    {% if v.lesson.title %}
+                        <div class="absolute top-2 left-2 bg-orange-500 text-white px-2 py-1 rounded text-xs">{{ v.lesson.title }}</div>
+                    {% endif %}
+                    </div>
+                </div>
+
+                <div class="flex-1 p-6">
+                    <div class="flex flex-col h-full">
+                    <h3 class="video-title text-xl font-semibold text-gray-900 mb-3 transition-colors line-clamp-2">
+                        <a href="{{ v.url or '#' }}">{{ v.title }}</a>
+                    </h3>
+
+                    <p class="text-gray-600 text-sm leading-relaxed mb-4 line-clamp-3">
+                        {{ v.description }}
+                    </p>
+
+                    <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                        <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                            <span>
+                            {{ v.view }} lượt xem
+                            </span>
+                        </div>
+
+                        {% if v.created_at %}
+                        <div class="flex items-center space-x-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span>{{ v.created_at }}</span>
+                        </div>
+                        {% endif %}
+                        </div>
+
+                        <!-- {% if v.rating %}
+                        <div class="flex items-center space-x-1">
+                        <div class="flex items-center">
+                            {% set full = v.rating|int %}
+                            {% for i in range(1,6) %}
+                            <svg class="w-4 h-4 {{ 'text-orange-500 fill-current' if i <= full else 'text-gray-300' }}" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                            {% endfor %}
+                        </div>
+                        <span class="text-sm font-medium">{{ '%.1f'|format(v.rating) }}</span>
+                        </div>
+                        {% endif %} -->
+                    </div>
+
+                    <div class="flex items-center space-x-3 mt-auto">
+                        {% if v.created_by_user.profile.avatar %}
+                        <img src="{{ v.created_by_user.profile.avatar }}" alt="Author" class="w-8 h-8 rounded-full">
+                        {% endif %}
+                        <span class="text-sm font-medium text-gray-700">{{ v.created_by_user.username or '' }}</span>
+                    </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+            {% else %}
+                <div class="bg-white border rounded-lg p-8 text-center text-gray-600">
+                Không có kết quả phù hợp cho “{{ query }}”.
+                </div>
+            {% endfor %}
+            </div>
+        </div>
+
+         <!-- Load More  -->
+        <div class="text-center mt-12">
+            <button class="border border-gray-300 text-gray-700 hover:bg-gray-50 px-6 py-3 rounded-lg text-lg">
+                Tải thêm kết quả
+            </button>
+        </div>
+    </main>
+
+     <!-- Filter Modal  -->
+    <div id="filterModal" class="modal">
+        <div class="bg-white rounded-2xl p-6 max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-semibold text-gray-900">Bộ lọc kết quả</h3>
+                <button onclick="closeFilterModal()" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Thời lượng (phút)</label>
+                    <input type="range" min="0" max="60" value="30" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-xs text-gray-500 mt-2">
+                        <span>0 phút</span>
+                        <span>60 phút</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Đánh giá tối thiểu</label>
+                    <input type="range" min="0" max="5" step="0.5" value="4" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-xs text-gray-500 mt-2">
+                        <span>0 sao</span>
+                        <span>5 sao</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Thời gian đăng</label>
+                    <select class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="all">Tất cả</option>
+                        <option value="today">Hôm nay</option>
+                        <option value="week">Tuần này</option>
+                        <option value="month">Tháng này</option>
+                        <option value="year">Năm này</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-3">Danh mục</label>
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <input type="checkbox" id="design" class="h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-300 rounded">
+                            <label for="design" class="ml-2 text-sm text-gray-700">Design</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="animation" class="h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-300 rounded">
+                            <label for="animation" class="ml-2 text-sm text-gray-700">Animation</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="ux" class="h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-300 rounded">
+                            <label for="ux" class="ml-2 text-sm text-gray-700">UX Design</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="typography" class="h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-300 rounded">
+                            <label for="typography" class="ml-2 text-sm text-gray-700">Typography</label>
+                        </div>
+                        <div class="flex items-center">
+                            <input type="checkbox" id="branding" class="h-4 w-4 text-orange-500 focus:ring-orange-500 border-gray-300 rounded">
+                            <label for="branding" class="ml-2 text-sm text-gray-700">Branding</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-between pt-6 border-t border-gray-200 mt-6">
+                <button onclick="resetFilters()" class="border border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-md">
+                    Đặt lại
+                </button>
+                <button onclick="applyFilters()" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md">
+                    Áp dụng
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+
+    
+
+
+
+     <!-- Footer  -->
+    <footer class="bg-white border-t border-gray-200 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="text-center text-gray-600">
+                <p>&copy; 2024 CreativeHub. Tất cả quyền được bảo lưu.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function goBack() {
+            window.history.back();
+        }
+
+        function handleSearch(event) {
+    if (event.key === 'Enter') {
+        const query = document.getElementById('searchInput').value.trim();
+        if (query) {
+            // Gọi sang Flask route /search và truyền query q
+            window.location.href = `/search?q=${encodeURIComponent(query)}`;
+        }
+    }
+}
+
+        function openFilterModal() {
+            document.getElementById('filterModal').classList.add('show');
+        }
+
+        function closeFilterModal() {
+            document.getElementById('filterModal').classList.remove('show');
+        }
+
+        function resetFilters() {
+            document.querySelectorAll('#filterModal input[type="checkbox"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            document.querySelectorAll('#filterModal select').forEach(select => {
+                select.selectedIndex = 0;
+            });
+            console.log('Filters reset');
+        }
+
+        function applyFilters() {
+            console.log('Filters applied');
+            closeFilterModal();
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('filterModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeFilterModal();
+            }
+        });
+
+        // Add hover effects to video cards
+        document.addEventListener('DOMContentLoaded', function() {
+            const videoCards = document.querySelectorAll('.video-card');
+            videoCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    console.log('Navigate to video detail');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
