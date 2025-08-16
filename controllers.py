@@ -7,7 +7,7 @@ from models import db
 from sklearn.metrics.pairwise import cosine_similarity
 from functools import wraps
 from urllib.parse import urlparse, urljoin
-
+from sqlalchemy import func
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import re
@@ -93,6 +93,28 @@ def get_gemini_explanation(title, description):
     else:
         print(f"API Error: {response.status_code} - {response.text}")
         return f"Lỗi khi gọi API Gemini: {response.status_code} - {response.text}"
+
+_REQUIRED_KEYS = {"definition", "scientific_explanation", "example", "summary"}
+
+def _read_explanation_from_principle(raw: str):
+    """Ưu tiên đọc JSON; nếu không phải JSON thì thử parse theo format cũ."""
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    # Thử JSON
+    try:
+        obj = json.loads(raw)
+        if isinstance(obj, dict):
+            data = obj.get("data") if isinstance(obj.get("data"), dict) else obj
+            if _REQUIRED_KEYS.issubset(data.keys()):
+                return data
+    except Exception:
+        pass
+    # Thử chuỗi text cũ -> tách section
+    try:
+        return format_explanation(raw)
+    except Exception:
+        return None
 
 def load_video_data():
     with open('embedded_titles.json', 'r', encoding='utf-8') as f:
@@ -317,6 +339,80 @@ def init_routes(app):
         user_id = session.get('user_id')   
         top_videos = Video.query.order_by(Video.view.desc()).limit(6).all()
         return render_template('Home.html', username=username, user_id=user_id, videos = top_videos) 
+    
+    #Phần đánh giá (Update 16/8)
+    @app.post('/api/rate/<int:video_id>')
+    @login_required
+    def api_rate(video_id):
+        data = request.get_json(silent=True) or {}
+
+        # --- Lấy & validate input ---
+        try:
+            rating = int(data.get('rating', 0))
+        except ValueError:
+            rating = 0
+        comment = (data.get('comment') or '').strip()
+
+        if rating < 1 or rating > 5:
+            return jsonify({"ok": False, "error": "Rating phải từ 1 đến 5"}), 400
+        if len(comment) > 1000:
+            return jsonify({"ok": False, "error": "Bình luận quá dài (<=1000 ký tự)"}), 400
+
+        # --- Upsert Feedback ---
+        fb = Feedback.query.filter_by(user_id=session['user_id'], video_id=video_id).first()
+        if fb:
+            # cập nhật sao
+            fb.rating = rating
+            # nếu client gửi khóa 'comment' thì cập nhật; tránh ghi đè ngoài ý muốn
+            if 'comment' in data:
+                fb.comment = comment or None
+            # nếu model có created_at mà đang None, set thủ công
+            if getattr(fb, 'created_at', None) is None:
+                fb.created_at = datetime.utcnow()
+        else:
+            fb = Feedback(
+                user_id=session['user_id'],
+                video_id=video_id,
+                rating=rating,
+                comment=comment or None,
+                created_at=datetime.utcnow()  # nếu cột có default thì dòng này không bắt buộc
+            )
+            db.session.add(fb)
+
+        db.session.commit()
+
+        # --- Tính lại thống kê ---
+        avg, cnt = db.session.query(
+            func.avg(Feedback.rating),
+            func.count(Feedback.feedback_id)
+        ).filter(Feedback.video_id == video_id).first()
+
+        rows = (db.session.query(Feedback.rating, func.count(Feedback.feedback_id))
+                .filter(Feedback.video_id == video_id)
+                .group_by(Feedback.rating)
+                .all())
+        hist = {i: 0 for i in range(1, 6)}
+        for r, c in rows:
+            try:
+                ri = int(r)
+                if 1 <= ri <= 5:
+                    hist[ri] = int(c)
+            except:
+                pass
+
+        return jsonify({
+            "ok": True,
+            "my_rating": rating,
+            "avg": round(float(avg or 0), 2),
+            "count": int(cnt or 0),
+            "hist": hist,
+            "review": {
+                "rating": rating,
+                "comment": fb.comment or ""
+            }
+        })
+
+
     # Trang VideoSingle
     @app.route('/video/<int:video_id>')
     def video_single(video_id):
@@ -327,18 +423,92 @@ def init_routes(app):
         materials = MaterialAmount.query.filter_by(video_id=video_id).join(Material).all()
         humanize.i18n.activate('vi_VN')
         time_diff = humanize.naturaltime(datetime.now() - video.created_at)
-        sgk_data = load_video_data()
-        model = SentenceTransformer('all-MiniLM-L6-v2')
-        query = video.description  
-        query_vec = model.encode(query).reshape(1, -1)
-        doc_embeddings = np.array([d["embedding"] for d in sgk_data])
-        similarities = cosine_similarity(query_vec, doc_embeddings)[0]
-        best_idx = int(np.argmax(similarities))
-        matched_doc = sgk_data[best_idx]
-        explanation = get_gemini_explanation(video.title, matched_doc['content'])
-        print(video.title,matched_doc['title'], matched_doc['content'])
-        print(explanation)
-        return render_template('VideoSingle.html', video=video, materials=materials, time_diff=time_diff, explanation=explanation)
+        
+        # ==== NEW: đọc cache từ cột videos.principle trước ====
+        explanation = _read_explanation_from_principle(video.principle)
+
+        if explanation is None:
+            # (giữ nguyên các dòng cũ trong nhánh else này)
+            sgk_data = load_video_data()
+            model = SentenceTransformer('all-MiniLM-L6-v2')
+            query = video.description
+            query_vec = model.encode(query).reshape(1, -1)
+            doc_embeddings = np.array([d["embedding"] for d in sgk_data])
+            similarities = cosine_similarity(query_vec, doc_embeddings)[0]
+            best_idx = int(np.argmax(similarities))
+            matched_doc = sgk_data[best_idx]
+            explanation = get_gemini_explanation(video.title, matched_doc['content'])
+            print(video.title, matched_doc['title'], matched_doc['content'])
+            print(explanation)
+
+            # LƯU cache (JSON) vào cột principle để lần sau không gọi Gemini nữa
+            try:
+                video.principle = json.dumps(explanation, ensure_ascii=False)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
+                # Up date đánh giá (16/8)
+        avg, cnt = db.session.query(
+            func.avg(Feedback.rating),
+            func.count(Feedback.feedback_id)
+        ).filter(Feedback.video_id == video_id).first()
+        avg_rating = round(float(avg or 0), 2)
+        rating_count = int(cnt or 0)
+
+        # Lấy rating của chính user (nếu đăng nhập)
+        my_rating = 0
+        if session.get('user_id'):
+            fb = Feedback.query.filter_by(user_id=session['user_id'], video_id=video_id).first()
+            if fb:
+                my_rating = fb.rating
+
+        # >>> THÊM ĐOẠN NÀY: tính histogram 1..5 sao
+        rows = db.session.query(
+            Feedback.rating,
+            func.count(Feedback.feedback_id)
+        ).filter(Feedback.video_id == video_id).group_by(Feedback.rating).all()
+
+        star_hist = {i: 0 for i in range(1, 6)}
+        for r, c in rows:
+            try:
+                r_int = int(r)
+                if 1 <= r_int <= 5:
+                    star_hist[r_int] = int(c)
+            except (TypeError, ValueError):
+                pass
+        # star_hist đã có dạng {1: x, 2: y, 3: z, 4: a, 5: b}
+        max_star_count = max(star_hist.values()) if any(star_hist.values()) else 1
+        # <<< HẾT ĐOẠN THÊM
+        humanize.i18n.activate('vi_VN')
+
+        reviews_q = (db.session.query(Feedback, User.username)
+                    .join(User, User.user_id == Feedback.user_id)
+                    .filter(Feedback.video_id == video_id)
+                    .order_by(Feedback.created_at.desc(), Feedback.feedback_id.desc())
+                    .limit(50)  # tuỳ bạn
+                    .all())
+
+        def _human(dt):
+            try:
+                return humanize.naturaltime(datetime.now() - dt)
+            except Exception:
+                return ""
+
+        reviews = []
+        for fb, uname in reviews_q:
+            reviews.append({
+                "user": uname,
+                "rating": int(fb.rating or 0),
+                "comment": fb.comment or "",
+                "created_at_human": _human(fb.created_at) if getattr(fb, 'created_at', None) else "",
+                "created_at_iso": fb.created_at.isoformat() if getattr(fb, 'created_at', None) else ""
+            })
+        return render_template('VideoSingle.html', video=video, materials=materials, time_diff=time_diff, explanation=explanation,avg_rating=avg_rating,
+        rating_count=rating_count,
+        my_rating=my_rating,star_hist=star_hist,
+        max_star_count=max_star_count,
+        reviews=reviews)
     
     # Trang Khám phá
     @app.route('/allvideo', methods=['GET'])
@@ -430,4 +600,6 @@ def init_routes(app):
                                parsed_materials=parsed_materials,
                                total=len(results),
                                results=results)
+    
+
     
